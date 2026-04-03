@@ -14,7 +14,7 @@
 (function() {
   'use strict';
 
-  var TRACKER_URL = 'https://chain.yourdomain.com';
+  var TRACKER_URL = 'https://chain.lordluzeer.xyz';
 
   // TornPDA injects the API key via this placeholder at runtime
   var PDA_KEY = '###PDA-APIKEY###';
