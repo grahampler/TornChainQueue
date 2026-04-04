@@ -2,7 +2,7 @@
 // @name         Torn Chain Tracker - TornPDA
 // @namespace    https://torn.com
 // @version      3.3
-// @description  Chain queue panel for TornPDA
+// @description  Chain queue panel for TornPDA 
 // @author       LordGraham
 // @match        https://www.torn.com/*
 // @grant        none
