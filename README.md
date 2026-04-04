@@ -39,17 +39,6 @@ Usage,
 Tap the Chain Tracker button to open the panel,
 Tap Claim slot to add yourself to the queue,
 Tap Mark done after you’ve made your hit,
-:heart:
-Click to react
-:joy:
-Click to react
-:white_check_mark:
-Click to react
-Add Reaction
-Edit
-Forward
-More
-[8:17 PM]Friday, April 3, 2026 8:17 PM
 The queue syncs live across all members — everyone sees the same order in real time,
 An alert fires when the chain timer drops below 45 seconds,
 
