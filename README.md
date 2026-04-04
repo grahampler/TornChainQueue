@@ -6,7 +6,7 @@ A real-time faction chain queue tool. Coordinates who attacks next during a chai
 PC (Tampermonkey),
 Requirements: The Tampermonkey browser extension installed in Chrome, Firefox, or Edge.
 
-Go to the GitHub repository and open torn-chain-panel.user.js,
+Go to the GitHub repository and open tornPC.js,
 Click the Raw button to view the raw code,
 Select all the code and copy it,
 Open Tampermonkey in your browser → click the extension icon → Create a new script,
@@ -22,7 +22,7 @@ The key is saved locally in your browser and never shared.
 TornPDA (Mobile),
 Requirements: TornPDA app installed on your phone with your Torn account connected.
 
-Go to the GitHub repository and open torn-chain-pda.user.js,
+Go to the GitHub repository and open tornPDA.js,
 Click the Raw button to view the raw code,
 Select all the code and copy it,
 In TornPDA, open the hamburger menu (top left) → Advanced browser settings → Manage scripts,
