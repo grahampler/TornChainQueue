@@ -38,9 +38,10 @@ No API key needed — TornPDA automatically provides your key to the script.
 Usage,
 Tap the Chain Tracker button to open the panel,
 Tap Claim slot to add yourself to the queue,
-Tap Mark done after you’ve made your hit,
+You can tap Mark done after you’ve made your hit, or it will auto mark that number as done after the hit reads
 The queue syncs live across all members — everyone sees the same order in real time,
-An alert fires when the chain timer drops below 45 seconds,
+An alert fires when the chain timer drops below 45 seconds.
+This is not perfect, there is a few seconds delay as the API polls every 15 seconds and can take that long for the time to catch up to the real time (sometimes still a few seconds off).
 
 -----
 
