@@ -9,14 +9,14 @@
 // @grant        GM_addStyle
 // @grant        GM_setValue
 // @grant        GM_getValue
-// @connect      chain.lordluzer.xyz
+// @connect      cool-field-1c8b.musiccmangraham.workers.dev
 // @connect      api.torn.com
 // ==/UserScript==
 
 (function() {
   'use strict';
 
-  var TRACKER_URL = 'https://chain.lordluzer.xyz';
+  var TRACKER_URL = 'https://cool-field-1c8b.musiccmangraham.workers.dev';
 
   var members = [];
   var chainCount = 0;
