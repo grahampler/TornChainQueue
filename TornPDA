@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Tracker - TornPDA
 // @namespace    https://torn.com
-// @version      3.4
+// @version      3.5
 // @description  Chain queue panel for TornPDA
 // @author       LordGraham
 // @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/TornPDA
