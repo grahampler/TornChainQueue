@@ -14,10 +14,10 @@
 // @connect      chain.lordluzer.xyz
 // @connect      api.torn.com
 // ==/UserScript==
- 
+
 (function() {
   'use strict';
- 
+
   var TRACKER_URL = 'https://chain.lordluzer.xyz';
 
   var members = [];
@@ -289,6 +289,7 @@
       setSyncStatus(true);
       var incoming = data.members || [];
       var incomingCount = data.chainCount || 0;
+      if (prevChainCount === -1) prevChainCount = incomingCount;
       if (JSON.stringify(members) !== JSON.stringify(incoming) || incomingCount !== chainCount) {
         if (prevChainCount !== -1 && incomingCount > prevChainCount) {
           var diff = incomingCount - prevChainCount;
@@ -409,9 +410,8 @@
   }
 
   function resetQueue() {
-    for (var i = 0; i < members.length; i++) members[i].status = 'waiting';
-    if (members.length) members[0].status = 'up';
-    alertFired = false; reassignHits(); renderQueue(); pushQueue();
+    members = []; chainCount = 0; prevChainCount = -1;
+    alertFired = false; renderQueue(); pushQueue();
   }
 
   function toggleSound() {
