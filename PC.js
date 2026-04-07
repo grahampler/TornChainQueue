@@ -4,8 +4,8 @@
 // @version      2.3
 // @description  Floating chain queue panel — syncs with your shared tracker backend. Works in Tampermonkey and TornPDA.
 // @author       LordGraham
-// @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC
-// @updateURL   https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC
+// @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC.js
+// @updateURL   https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC.js
 // @match        https://www.torn.com/*
 // @grant        GM_addStyle
 // @grant        GM_xmlhttpRequest
