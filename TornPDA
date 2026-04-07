@@ -1,8 +1,8 @@
 // ==UserScript==
 // @name         Torn Chain Tracker - TornPDA
 // @namespace    https://torn.com
-// @version      3.3
-// @description  Chain queue panel for TornPDA 
+// @version      3.4
+// @description  Chain queue panel for TornPDA
 // @author       LordGraham
 // @match        https://www.torn.com/*
 // @grant        none
@@ -24,10 +24,9 @@
   var localTimeout = 0;
   var localTick = null;
   var infoBannerTimer = null;
+  var pushLockUntil = 0;
 
   var COLORS = ['#534AB7','#1D9E75','#D85A30','#185FA5','#854F0B','#993556','#0F6E56','#3C3489'];
-
-  // ── HTTP via flutter bridge ────────────────────────────────────────────────
 
   var pdaReady = false;
   var pdaQueue = [];
@@ -38,10 +37,8 @@
     pdaQueue = [];
   }
 
-  // Listen for the ready event
   window.addEventListener('flutterInAppWebViewPlatformReady', flushQueue);
 
-  // Also check if it already fired or if callHandler already exists
   function checkReady() {
     if (typeof window.flutter_inappwebview !== 'undefined' &&
         typeof window.flutter_inappwebview.callHandler === 'function') {
@@ -57,33 +54,20 @@
     else { pdaQueue.push(fn); }
   }
 
-  function debugStatus(msg) {
-    var el = document.getElementById('ctsl');
-    if (el) el.textContent = String(msg).slice(0, 60);
-  }
-
   function doGet(url, onSuccess, onFail) {
-    var isTracker = url.indexOf('lordluzer') !== -1;
     whenReady(function() {
       window.flutter_inappwebview.callHandler('PDA_httpGet', url, {})
         .then(function(r) {
           try {
-            if (isTracker) debugStatus('got:' + JSON.stringify(r).slice(0, 50));
             var text = r;
             if (r && typeof r === 'object') {
               text = r.body || r.responseText || r.response || JSON.stringify(r);
             }
             if (typeof text !== 'string') text = JSON.stringify(text);
             onSuccess(JSON.parse(text));
-          } catch(e) {
-            if (isTracker) debugStatus('parse err:' + String(e).slice(0, 40));
-            if(onFail) onFail(e);
-          }
+          } catch(e) { if(onFail) onFail(e); }
         })
-        .catch(function(e) {
-          if (isTracker) debugStatus('catch:' + String(e).slice(0, 40));
-          if(onFail) onFail(e);
-        });
+        .catch(function(e) { if(onFail) onFail(e); });
     });
   }
 
@@ -94,12 +78,10 @@
         {'Content-Type': 'application/json', 'Accept': 'application/json', 'Origin': 'https://torn.com'},
         JSON.stringify(data)
       )
-      .then(function(r) { if(onDone) onDone(); })
-      .catch(function(e) { if(onDone) onDone(); });
+      .then(function() { if(onDone) onDone(); })
+      .catch(function() { if(onDone) onDone(); });
     });
   }
-
-  // ── Styles ─────────────────────────────────────────────────────────────────
 
   var s = document.createElement('style');
   s.textContent =
@@ -149,11 +131,8 @@
     '#ctpn b{color:#534AB7;}';
   document.head.appendChild(s);
 
-  // ── Build UI ───────────────────────────────────────────────────────────────
-
   var btn = document.createElement('button');
-  btn.id = 'ctb';
-  btn.textContent = 'Chain Tracker';
+  btn.id = 'ctb'; btn.textContent = 'Chain Tracker';
   document.body.appendChild(btn);
 
   var wrap = document.createElement('div');
@@ -187,11 +166,7 @@
     '</div>';
   document.body.appendChild(wrap);
 
-  // ── Wire events ────────────────────────────────────────────────────────────
-
-  btn.addEventListener('click', function() {
-    wrap.style.display = wrap.style.display === 'block' ? 'none' : 'block';
-  });
+  btn.addEventListener('click', function() { wrap.style.display = wrap.style.display === 'block' ? 'none' : 'block'; });
   document.getElementById('ctx').addEventListener('click', function() { wrap.style.display = 'none'; });
   document.getElementById('ctabtn').addEventListener('click', addMember);
   document.getElementById('ctinp').addEventListener('keydown', function(e) { if(e.key==='Enter') addMember(); });
@@ -200,12 +175,7 @@
   document.getElementById('ctreset').addEventListener('click', resetQueue);
   document.getElementById('ctsound').addEventListener('click', toggleSound);
 
-  // ── Helpers ────────────────────────────────────────────────────────────────
-
-  function toMMSS(s) {
-    if(!s||s<0) s=0; s=Math.floor(s);
-    return Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
-  }
+  function toMMSS(s) { if(!s||s<0) s=0; s=Math.floor(s); return Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
   function initials(n) { return n.trim().split(/\s+/).map(function(w){return w[0]||'';}).join('').toUpperCase().slice(0,2)||'?'; }
   function pickColor(n) { var h=0; for(var i=0;i<n.length;i++) h=(h*31+n.charCodeAt(i))%COLORS.length; return COLORS[h]; }
 
@@ -215,14 +185,12 @@
     d.className = ok ? 'ctsd ok' : 'ctsd er';
     l.textContent = ok ? 'synced' : 'sync error';
   }
-
   function showInfo(msg) {
     var b=document.getElementById('ctinfo'); if(!b) return;
     b.textContent=msg; b.style.display='block';
     if(infoBannerTimer) clearTimeout(infoBannerTimer);
     infoBannerTimer=setTimeout(function(){b.style.display='none';},5000);
   }
-
   function showAlert(msg) {
     var b=document.getElementById('ctalt');
     if(b){b.textContent=msg;b.style.display='block';setTimeout(function(){b.style.display='none';},8000);}
@@ -230,22 +198,18 @@
     if(soundEnabled) playBeep();
     try{navigator.vibrate([200,100,200,100,400]);}catch(e){}
   }
-
   function playBeep() {
     try {
       var ctx=new(window.AudioContext||window.webkitAudioContext)();
       [0,0.22,0.44].forEach(function(o){
         var osc=ctx.createOscillator(),g=ctx.createGain();
-        osc.connect(g);g.connect(ctx.destination);
-        osc.frequency.value=880;
+        osc.connect(g);g.connect(ctx.destination);osc.frequency.value=880;
         g.gain.setValueAtTime(0.3,ctx.currentTime+o);
         g.gain.exponentialRampToValueAtTime(0.001,ctx.currentTime+o+0.18);
         osc.start(ctx.currentTime+o);osc.stop(ctx.currentTime+o+0.22);
       });
     }catch(e){}
   }
-
-  // ── Queue ──────────────────────────────────────────────────────────────────
 
   function reassignHits() {
     var offset=0;
@@ -254,11 +218,8 @@
       offset++; members[i].hitNum=chainCount+offset;
     }
   }
-
   function renderQueue() {
-    var list=document.getElementById('ctlist');
-    var dot=document.getElementById('ctdot');
-    var qn=document.getElementById('ctqn');
+    var list=document.getElementById('ctlist'), dot=document.getElementById('ctdot'), qn=document.getElementById('ctqn');
     if(!list) return;
     var ml=playerName?playerName.toLowerCase():'';
     var pending=members.filter(function(m){return m.status!=='done';});
@@ -268,7 +229,7 @@
     list.innerHTML='';
     for(var i=0;i<members.length;i++){
       (function(idx){
-        var m=members[idx], isMe=ml&&m.name.toLowerCase()===ml, col=pickColor(m.name);
+        var m=members[idx],isMe=ml&&m.name.toLowerCase()===ml,col=pickColor(m.name);
         var row=document.createElement('div');
         row.className='ctr'+(m.status==='up'?' up':m.status==='done'?' dn':isMe?' me':'');
         var av=document.createElement('div'); av.className='ctav'; av.style.cssText='background:'+col+'22;color:'+col; av.textContent=initials(m.name);
@@ -287,7 +248,6 @@
       })(i);
     }
   }
-
   function addMember() {
     var inp=document.getElementById('ctinp'); if(!inp) return;
     var name=inp.value.trim(); if(!name) return;
@@ -295,7 +255,6 @@
     members.push({name:name,status:isFirst?'up':'waiting',hitNum:0});
     reassignHits(); inp.value=''; renderQueue(); pushQueue();
   }
-
   function claimSlot() {
     if(!playerName){showInfo('Player name not detected yet.');return;}
     var ml=playerName.toLowerCase();
@@ -308,7 +267,6 @@
     members.push({name:playerName,status:isFirst?'up':'waiting',hitNum:0});
     reassignHits(); renderQueue(); pushQueue();
   }
-
   function markDone() {
     for(var i=0;i<members.length;i++){
       if(members[i].status==='up'){
@@ -318,13 +276,11 @@
       }
     }
   }
-
   function resetQueue() {
     for(var i=0;i<members.length;i++) members[i].status='waiting';
     if(members.length) members[0].status='up';
     alertFired=false; reassignHits(); renderQueue(); pushQueue();
   }
-
   function toggleSound() {
     soundEnabled=!soundEnabled;
     var b=document.getElementById('ctsound'); if(!b) return;
@@ -332,12 +288,7 @@
     if(soundEnabled) b.classList.add('on'); else b.classList.remove('on');
   }
 
-  // ── Sync ───────────────────────────────────────────────────────────────────
-
-  function pushQueue() {
-    doPost(TRACKER_URL+'/queue',{members:members,chainCount:chainCount},null);
-  }
-
+  function pushQueue() { pushLockUntil = Date.now() + 3000; doPost(TRACKER_URL+'/queue',{members:members,chainCount:chainCount},null); }
   function checkPersonalAlert(incoming) {
     if(!playerName) return;
     var ml=playerName.toLowerCase();
@@ -348,44 +299,30 @@
       showAlert('Your turn, '+playerName+'! Attack NOW \u2014 hit #'+(me?me.hitNum:''));
     }
   }
-
-  // Sequential polling — next request only fires after previous completes
-  function schedulePull(delay) {
-    setTimeout(doPull, delay || 5000);
-  }
-
+  function schedulePull(delay) { setTimeout(doPull, delay||5000); }
   function doPull() {
     doGet(TRACKER_URL+'/queue', function(data) {
       setSyncStatus(true);
-      var incoming=data.members||[];
-      var incomingCount=data.chainCount||0;
+      if(Date.now() < pushLockUntil) { schedulePull(5000); return; }
+      var incoming=data.members||[], incomingCount=data.chainCount||0;
       if(JSON.stringify(members)!==JSON.stringify(incoming)||incomingCount!==chainCount){
         if(prevChainCount!==-1&&incomingCount>prevChainCount){
           var diff=incomingCount-prevChainCount;
-          if(incoming.filter(function(m){return m.status!=='done';}).length>0&&diff>0){
+          if(incoming.filter(function(m){return m.status!=='done';}).length>0&&diff>0)
             showInfo(diff===1?'Hit #'+incomingCount+' landed \u2014 queue advanced.':diff+' hits landed.');
-          }
         }
         checkPersonalAlert(incoming);
-        prevChainCount=incomingCount;
-        members=incoming;
-        chainCount=incomingCount;
-        var el=document.getElementById('ctmc');
-        if(el) el.textContent=chainCount.toLocaleString();
+        prevChainCount=incomingCount; members=incoming; chainCount=incomingCount;
+        var el=document.getElementById('ctmc'); if(el) el.textContent=chainCount.toLocaleString();
         renderQueue();
       }
       schedulePull(5000);
-    }, function() {
-      setSyncStatus(false);
-      schedulePull(10000);
-    });
+    }, function(){ setSyncStatus(false); schedulePull(10000); });
   }
-
-  // ── Timer ──────────────────────────────────────────────────────────────────
 
   function updateTimer(secs) {
     if(!secs||secs<0) secs=0;
-    var el=document.getElementById('ctmt'), bar=document.getElementById('cttf'); if(!el) return;
+    var el=document.getElementById('ctmt'),bar=document.getElementById('cttf'); if(!el) return;
     el.textContent=toMMSS(secs);
     if(bar){ bar.style.width=Math.min(100,Math.max(0,(secs/300)*100))+'%';
       if(secs<=45){bar.style.background='#E24B4A';el.style.color='#E24B4A';}
@@ -399,25 +336,18 @@
     }
     if(secs>45) alertFired=false;
   }
-
   function startCountdown(seconds) {
     if(localTick) clearInterval(localTick);
     localTimeout=Math.round(seconds); updateTimer(localTimeout);
     localTick=setInterval(function(){ if(localTimeout>0) localTimeout--; updateTimer(localTimeout); },1000);
   }
 
-  // ── API calls ──────────────────────────────────────────────────────────────
-
   function fetchPlayerName(key) {
     doGet('https://api.torn.com/user/?selections=basic&key='+key, function(data){
       if(data.name){ playerName=data.name; var el=document.getElementById('ctpname'); if(el) el.textContent=playerName; }
     }, function(){});
   }
-
-  function scheduleChain(key, delay) {
-    setTimeout(function(){ doChain(key); }, delay||0);
-  }
-
+  function scheduleChain(key, delay) { setTimeout(function(){ doChain(key); }, delay||0); }
   function doChain(key) {
     doGet('https://api.torn.com/faction/?selections=chain&key='+key, function(data){
       if(!data.error){
@@ -434,27 +364,22 @@
                 }
               }
             }
-            alertFired=false; reassignHits(); renderQueue(); pushQueue();
+            alertFired=false; reassignHits(); renderQueue();
             showInfo(diff===1?'Hit #'+newCount+' landed \u2014 auto-advanced.':diff+' hits landed.');
           }
         }
         prevChainCount=newCount; chainCount=newCount;
-        var ce=document.getElementById('ctmc'), me=document.getElementById('ctmm');
+        var ce=document.getElementById('ctmc'),mm=document.getElementById('ctmm');
         if(ce) ce.textContent=chainCount.toLocaleString();
-        if(me) me.textContent='x'+parseFloat(c.modifier||1).toFixed(2);
-        reassignHits(); renderQueue(); pushQueue();
+        if(mm) mm.textContent='x'+parseFloat(c.modifier||1).toFixed(2);
+        reassignHits(); renderQueue();
         startCountdown(c.timeout||0);
       }
       scheduleChain(key, 15000);
     }, function(){ scheduleChain(key, 15000); });
   }
 
-  // ── Init ───────────────────────────────────────────────────────────────────
-
   function init() {
-    // Show waiting state until platform ready
-    var sl = document.getElementById('ctsl');
-    if(sl) sl.textContent = 'waiting for bridge...';
     var key = API_KEY;
     if(!key||key==='###PDA-APIKEY###'||key.length<10){
       key=localStorage.getItem('ct-pda-key')||'';
@@ -464,10 +389,7 @@
       }
     }
     key=(key||'').trim();
-    if(key){
-      fetchPlayerName(key);
-      scheduleChain(key, 0);
-    }
+    if(key){ fetchPlayerName(key); scheduleChain(key, 0); }
     renderQueue();
     doPull();
   }
