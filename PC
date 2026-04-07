@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Tracker - Floating Panel
 // @namespace    https://torn.com
-// @version      2.2
+// @version      2.3
 // @description  Floating chain queue panel — syncs with your shared tracker backend. Works in Tampermonkey and TornPDA.
 // @author       LordGraham
 // @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC
