@@ -507,24 +507,6 @@
         if (data.error) return;
         var c = data.chain;
         var newCount = c.current || 0;
-        if (prevChainCount !== -1 && newCount > prevChainCount) {
-          var diff = newCount - prevChainCount;
-          if (members.filter(function(m) { return m.status !== 'done'; }).length > 0) {
-            for (var s = 0; s < diff; s++) {
-              for (var i = 0; i < members.length; i++) {
-                if (members[i].status === 'up') {
-                  members[i].status = 'done';
-                  for (var j = 0; j < members.length; j++) {
-                    if (members[j].status === 'waiting') { members[j].status = 'up'; break; }
-                  }
-                  break;
-                }
-              }
-            }
-            alertFired = false; reassignHits(); renderQueue();
-            showInfo(diff === 1 ? 'Hit #' + newCount + ' landed \u2014 auto-advanced.' : diff + ' hits landed \u2014 queue advanced.');
-          }
-        }
         prevChainCount = newCount;
         chainCount = newCount;
         var ce = document.getElementById('ct-mcount');
