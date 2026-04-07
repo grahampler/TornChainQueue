@@ -352,22 +352,6 @@
     doGet('https://api.torn.com/faction/?selections=chain&key='+key, function(data){
       if(!data.error){
         var c=data.chain, newCount=c.current||0;
-        if(prevChainCount!==-1&&newCount>prevChainCount){
-          var diff=newCount-prevChainCount;
-          if(members.filter(function(m){return m.status!=='done';}).length>0){
-            for(var s=0;s<diff;s++){
-              for(var i=0;i<members.length;i++){
-                if(members[i].status==='up'){
-                  members[i].status='done';
-                  for(var j=0;j<members.length;j++){if(members[j].status==='waiting'){members[j].status='up';break;}}
-                  break;
-                }
-              }
-            }
-            alertFired=false; reassignHits(); renderQueue();
-            showInfo(diff===1?'Hit #'+newCount+' landed \u2014 auto-advanced.':diff+' hits landed.');
-          }
-        }
         prevChainCount=newCount; chainCount=newCount;
         var ce=document.getElementById('ctmc'),mm=document.getElementById('ctmm');
         if(ce) ce.textContent=chainCount.toLocaleString();
