@@ -4,6 +4,8 @@
 // @version      3.4
 // @description  Chain queue panel for TornPDA
 // @author       LordGraham
+// @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/TornPDA
+// @updateURL   https://raw.githubusercontent.com/grahampler/TornChainQueue/main/TornPDA
 // @match        https://www.torn.com/*
 // @grant        none
 // @connect.    cool-field-1c8b.musiccmangraham.workers.dev
