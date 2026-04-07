@@ -8,12 +8,17 @@
 // @updateURL   https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC
 // @match        https://www.torn.com/*
 // @grant        GM_addStyle
+// @grant        GM_xmlhttpRequest
+// @grant        GM_setValue
+// @grant        GM_getValue
+// @connect      chain.lordluzer.xyz
+// @connect      api.torn.com
 // ==/UserScript==
-
+ 
 (function() {
   'use strict';
-
-  var TRACKER_URL = 'https://chain.yourdomain.com';
+ 
+  var TRACKER_URL = 'https://chain.lordluzer.xyz';
 
   var members = [];
   var chainCount = 0;
