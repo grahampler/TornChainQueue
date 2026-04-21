@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Tracker - Floating Panel
 // @namespace    https://torn.com
-// @version      2.3
+// @version      2.4
 // @description  Floating chain queue panel — syncs with your shared tracker backend. Works in Tampermonkey and TornPDA.
 // @author       LordGraham
 // @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/PC.user.js
@@ -85,21 +85,25 @@
     '#ct-qwrap{max-height:200px;overflow-y:auto;padding:6px 10px;}' +
     '#ct-qwrap::-webkit-scrollbar{width:3px;}' +
     '#ct-qwrap::-webkit-scrollbar-thumb{background:#2e3147;border-radius:2px;}' +
-    '.ct-qi{display:grid;grid-template-columns:26px 1fr auto auto auto;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;border:0.5px solid #2e3147;background:#13151f;margin-bottom:4px;}' +
+    '.ct-qi{display:grid;grid-template-columns:26px 1fr auto auto auto auto;align-items:center;gap:6px;padding:6px 8px;border-radius:6px;border:0.5px solid #2e3147;background:#13151f;margin-bottom:4px;}' +
     '.ct-qi.is-up{border:1.5px solid #1D9E75;background:#0d1f18;}' +
     '.ct-qi.is-me{border:1.5px solid #534AB7;background:#13111f;}' +
     '.ct-qi.is-done{opacity:0.3;}' +
+    '.ct-qi.is-backup{border:1.5px solid #BA7517;background:#1e1608;}' +
     '.ct-av{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:500;}' +
     '.ct-qname{font-size:12px;font-weight:500;color:#e8eaf6;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
     '.ct-qhit{font-size:11px;color:#7b8098;white-space:nowrap;}' +
     '.ct-qhit.up{color:#5DCAA5;font-weight:500;}' +
     '.ct-qhit.me{color:#AFA9EC;font-weight:500;}' +
+    '.ct-qhit.backup{color:#FAC775;font-weight:500;}' +
     '.ct-bdg{font-size:10px;padding:2px 6px;border-radius:4px;font-weight:500;white-space:nowrap;}' +
     '.ct-bdg.up{background:#0d2e20;color:#5DCAA5;border:0.5px solid #1D9E75;}' +
     '.ct-bdg.wait{background:#1e2130;color:#7b8098;}' +
     '.ct-bdg.done{background:#181b27;color:#4a4f66;}' +
     '.ct-bdg.me{background:#13111f;color:#AFA9EC;border:0.5px solid #534AB7;}' +
+    '.ct-bdg.backup{background:#1e1608;color:#FAC775;border:0.5px solid #BA7517;}' +
     '.ct-rm{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:11px;color:#4a4f66;background:transparent;border:0.5px solid #2e3147;border-radius:4px;cursor:pointer;padding:0;}' +
+    '.ct-skip{width:20px;height:20px;display:flex;align-items:center;justify-content:center;font-size:9px;color:#FAC775;background:transparent;border:0.5px solid #BA7517;border-radius:4px;cursor:pointer;padding:0;}' +
     '#ct-addrow{display:flex;gap:6px;padding:0 10px 8px;}' +
     '#ct-addinp{flex:1;height:30px;border:0.5px solid #2e3147;border-radius:6px;padding:0 8px;font-size:12px;background:#13151f;color:#e8eaf6;outline:none;font-family:sans-serif;}' +
     '#ct-addinp:focus{border-color:#534AB7;}' +
@@ -108,6 +112,7 @@
     '#ct-controls button{height:28px;border:0.5px solid #2e3147;border-radius:6px;font-size:11px;font-weight:500;background:#1e2130;color:#c8cae0;cursor:pointer;font-family:sans-serif;}' +
     '#ct-controls button:hover{background:#262a3d;}' +
     '#ct-btn-claim{background:#1D9E75!important;color:#fff!important;border-color:#1D9E75!important;}' +
+    '#ct-btn-backup{background:#1e1608!important;color:#FAC775!important;border-color:#BA7517!important;}' +
     '#ct-btn-reset{color:#E24B4A!important;border-color:#4a1515!important;background:transparent!important;grid-column:span 2;}' +
     '#ct-btn-sound.on{background:#534AB7!important;color:#fff!important;border-color:#534AB7!important;}' +
     '#ct-playingas{font-size:10px;color:#4a4f66;padding:0 10px 8px;}' +
@@ -148,6 +153,7 @@
       '<div id="ct-addrow"><input type="text" id="ct-addinp" placeholder="Member name" /><button id="ct-addbtn">+ Add</button></div>' +
       '<div id="ct-controls">' +
         '<button id="ct-btn-claim">Claim slot (+1)</button>' +
+        '<button id="ct-btn-backup">Claim backup</button>' +
         '<button id="ct-btn-done">Mark done</button>' +
         '<button id="ct-btn-sound">Sound off</button>' +
         '<button id="ct-btn-reset">Reset queue</button>' +
@@ -234,6 +240,7 @@
     document.getElementById('ct-addbtn').addEventListener('click', addMember);
     document.getElementById('ct-addinp').addEventListener('keydown', function(e) { if (e.key === 'Enter') addMember(); });
     document.getElementById('ct-btn-claim').addEventListener('click', claimSlot);
+    document.getElementById('ct-btn-backup').addEventListener('click', claimBackup);
     document.getElementById('ct-btn-done').addEventListener('click', markDone);
     document.getElementById('ct-btn-reset').addEventListener('click', resetQueue);
     document.getElementById('ct-btn-sound').addEventListener('click', toggleSound);
@@ -273,11 +280,16 @@
   function checkPersonalAlert(incoming) {
     if (!playerName) return;
     var ml = playerName.toLowerCase();
-    var wasUp = members.some(function(m) { return m.name.toLowerCase() === ml && m.status === 'up'; });
-    var nowUp = incoming.some(function(m) { return m.name.toLowerCase() === ml && m.status === 'up'; });
+    var wasUp = members.some(function(m) { return m.name.toLowerCase() === ml && m.status === 'up' && !m.isBackup; });
+    var nowUp = incoming.some(function(m) { return m.name.toLowerCase() === ml && m.status === 'up' && !m.isBackup; });
+    var wasBackup = members.some(function(m) { return m.name.toLowerCase() === ml && m.isBackup; });
     if (nowUp && !wasUp) {
-      var me = incoming.find(function(m) { return m.name.toLowerCase() === ml; });
-      showAlert('Your turn, ' + playerName + '! Attack NOW \u2014 hit #' + (me ? me.hitNum : ''));
+      var me = incoming.find(function(m) { return m.name.toLowerCase() === ml && m.status === 'up'; });
+      if (wasBackup) {
+        showAlert('Backup promoted! ' + playerName + ', attack NOW \u2014 hit #' + (me ? me.hitNum : ''));
+      } else {
+        showAlert('Your turn, ' + playerName + '! Attack NOW \u2014 hit #' + (me ? me.hitNum : ''));
+      }
     }
   }
 
@@ -293,7 +305,7 @@
       if (JSON.stringify(members) !== JSON.stringify(incoming) || incomingCount !== chainCount) {
         if (prevChainCount !== -1 && incomingCount > prevChainCount) {
           var diff = incomingCount - prevChainCount;
-          var pending = incoming.filter(function(m) { return m.status !== 'done'; });
+          var pending = incoming.filter(function(m) { return m.status !== 'done' && !m.isBackup; });
           if (pending.length > 0 && diff > 0) {
             showInfo(diff === 1
               ? 'Hit #' + incomingCount + ' landed \u2014 queue advanced.'
@@ -315,9 +327,24 @@
     var offset = 0;
     for (var i = 0; i < members.length; i++) {
       if (members[i].status === 'done') continue;
+      if (members[i].isBackup) continue;
       offset++;
       members[i].hitNum = chainCount + offset;
     }
+  }
+
+  function findBackupIndex() {
+    for (var i = 0; i < members.length; i++) {
+      if (members[i].isBackup) return i;
+    }
+    return -1;
+  }
+
+  function findUpIndex() {
+    for (var i = 0; i < members.length; i++) {
+      if (members[i].status === 'up' && !members[i].isBackup) return i;
+    }
+    return -1;
   }
 
   function renderQueue() {
@@ -326,50 +353,98 @@
     var qcount = document.getElementById('ct-qcount');
     if (!list) return;
     var ml = playerName ? playerName.toLowerCase() : '';
-    var pending = members.filter(function(m) { return m.status !== 'done'; });
+    var pending = members.filter(function(m) { return m.status !== 'done' && !m.isBackup; });
     if (ldot) ldot.className = members.some(function(m) { return m.status === 'up'; }) ? 'ct-live-dot on' : 'ct-live-dot';
     if (qcount) qcount.textContent = pending.length ? pending.length + ' in queue' : '';
     if (!members.length) {
       list.innerHTML = '<div style="color:#4a4f66;font-size:12px;text-align:center;padding:12px 0;">Add members to build the queue.</div>';
       return;
     }
-    list.innerHTML = '';
+
+    // Display order: up first, backup second, then rest in order
+    var upIdx = findUpIndex();
+    var backupIdx = findBackupIndex();
+    var sorted = [];
+    if (upIdx !== -1) sorted.push(upIdx);
+    if (backupIdx !== -1) sorted.push(backupIdx);
     for (var i = 0; i < members.length; i++) {
+      if (i !== upIdx && i !== backupIdx) sorted.push(i);
+    }
+
+    list.innerHTML = '';
+    for (var s = 0; s < sorted.length; s++) {
       (function(idx) {
         var m = members[idx];
         var isMe = ml && m.name.toLowerCase() === ml;
         var col = pickColor(m.name);
         var row = document.createElement('div');
-        row.className = 'ct-qi' + (m.status === 'up' ? ' is-up' : m.status === 'done' ? ' is-done' : isMe ? ' is-me' : '');
+
+        if (m.isBackup) {
+          row.className = 'ct-qi is-backup';
+        } else {
+          row.className = 'ct-qi' + (m.status === 'up' ? ' is-up' : m.status === 'done' ? ' is-done' : isMe ? ' is-me' : '');
+        }
+
         var av = document.createElement('div');
         av.className = 'ct-av';
         av.style.cssText = 'background:' + col + '22;color:' + col;
         av.textContent = initials(m.name);
+
         var nm = document.createElement('span');
         nm.className = 'ct-qname';
         nm.textContent = m.name + (isMe ? ' (you)' : '');
+
         var hn = document.createElement('span');
-        hn.className = 'ct-qhit' + (m.status === 'up' ? ' up' : isMe ? ' me' : '');
-        hn.textContent = '#' + m.hitNum;
+        if (m.isBackup) {
+          hn.className = 'ct-qhit backup';
+          hn.textContent = 'bkp';
+        } else {
+          hn.className = 'ct-qhit' + (m.status === 'up' ? ' up' : isMe ? ' me' : '');
+          hn.textContent = '#' + m.hitNum;
+        }
+
         var bdg = document.createElement('span');
-        bdg.className = 'ct-bdg ' + (m.status === 'up' ? 'up' : m.status === 'done' ? 'done' : isMe ? 'me' : 'wait');
-        bdg.textContent = m.status === 'up' ? 'Up now' : m.status === 'done' ? 'Done' : 'Waiting';
-        var rm = document.createElement('button');
-        rm.className = 'ct-rm';
-        rm.textContent = 'x';
-        rm.addEventListener('click', function() {
-          var wasUp = members[idx].status === 'up';
-          members.splice(idx, 1);
-          if (wasUp) {
-            for (var j = 0; j < members.length; j++) {
-              if (members[j].status === 'waiting') { members[j].status = 'up'; break; }
+        if (m.isBackup) {
+          bdg.className = 'ct-bdg backup';
+          bdg.textContent = 'Backup';
+        } else {
+          bdg.className = 'ct-bdg ' + (m.status === 'up' ? 'up' : m.status === 'done' ? 'done' : isMe ? 'me' : 'wait');
+          bdg.textContent = m.status === 'up' ? 'Up now' : m.status === 'done' ? 'Done' : 'Waiting';
+        }
+
+        // Skip button on the "up" row when a backup exists
+        if (m.status === 'up' && !m.isBackup && backupIdx !== -1) {
+          var skip = document.createElement('button');
+          skip.className = 'ct-skip';
+          skip.title = 'Skip — promote backup';
+          skip.textContent = '\u23ED';
+          skip.addEventListener('click', function() { skipToBackup(); });
+          row.appendChild(av); row.appendChild(nm); row.appendChild(hn); row.appendChild(bdg); row.appendChild(skip);
+        } else {
+          var rm = document.createElement('button');
+          rm.className = 'ct-rm';
+          rm.textContent = 'x';
+          rm.addEventListener('click', function() {
+            var wasUp = members[idx].status === 'up' && !members[idx].isBackup;
+            members.splice(idx, 1);
+            if (wasUp) {
+              var bi = findBackupIndex();
+              if (bi !== -1) {
+                members[bi].isBackup = false;
+                members[bi].status = 'up';
+              } else {
+                for (var j = 0; j < members.length; j++) {
+                  if (members[j].status === 'waiting') { members[j].status = 'up'; break; }
+                }
+              }
             }
-          }
-          reassignHits(); renderQueue(); pushQueue();
-        });
-        row.appendChild(av); row.appendChild(nm); row.appendChild(hn); row.appendChild(bdg); row.appendChild(rm);
+            reassignHits(); renderQueue(); pushQueue();
+          });
+          row.appendChild(av); row.appendChild(nm); row.appendChild(hn); row.appendChild(bdg); row.appendChild(rm);
+        }
+
         list.appendChild(row);
-      })(i);
+      })(sorted[s]);
     }
   }
 
@@ -378,26 +453,65 @@
     if (!inp) return;
     var name = inp.value.trim();
     if (!name) return;
-    var isFirst = !members.some(function(m) { return m.status !== 'done'; });
-    members.push({ name: name, status: isFirst ? 'up' : 'waiting', hitNum: 0 });
+    var isFirst = !members.some(function(m) { return m.status !== 'done' && !m.isBackup; });
+    members.push({ name: name, status: isFirst ? 'up' : 'waiting', hitNum: 0, isBackup: false });
     reassignHits(); inp.value = ''; renderQueue(); pushQueue();
   }
 
   function claimSlot() {
     if (!playerName) { showInfo('Player name not detected yet, please wait...'); return; }
-    var isFirst = !members.some(function(m) { return m.status !== 'done'; });
-    members.push({ name: playerName, status: isFirst ? 'up' : 'waiting', hitNum: 0 });
+    var isFirst = !members.some(function(m) { return m.status !== 'done' && !m.isBackup; });
+    members.push({ name: playerName, status: isFirst ? 'up' : 'waiting', hitNum: 0, isBackup: false });
     reassignHits(); renderQueue(); pushQueue();
-    var existing = members.filter(function(m) { return m.name.toLowerCase() === playerName.toLowerCase() && m.status !== 'done'; });
+    var existing = members.filter(function(m) { return m.name.toLowerCase() === playerName.toLowerCase() && m.status !== 'done' && !m.isBackup; });
     showInfo('Claimed slot \u2014 you have ' + existing.length + ' slot(s) in queue.');
+  }
+
+  function claimBackup() {
+    if (!playerName) { showInfo('Player name not detected yet, please wait...'); return; }
+    var bi = findBackupIndex();
+    if (bi !== -1) {
+      showInfo('Backup already set: ' + members[bi].name + '. Remove them first.');
+      return;
+    }
+    var ui = findUpIndex();
+    if (ui === -1) {
+      showInfo('Nobody is up right now \u2014 no backup needed yet.');
+      return;
+    }
+    members.push({ name: playerName, status: 'waiting', hitNum: 0, isBackup: true });
+    renderQueue(); pushQueue();
+    showInfo(playerName + ' is now backup for ' + members[ui].name + '.');
+  }
+
+  function skipToBackup() {
+    var ui = findUpIndex();
+    var bi = findBackupIndex();
+    if (ui === -1 || bi === -1) return;
+    var skippedName = members[ui].name;
+    // Move skipped person back to waiting at end of queue
+    members[ui].status = 'waiting';
+    // Promote backup to up
+    members[bi].isBackup = false;
+    members[bi].status = 'up';
+    alertFired = false;
+    reassignHits(); renderQueue(); pushQueue();
+    showInfo(members[bi].name + ' promoted. ' + skippedName + ' moved to end of queue.');
   }
 
   function markDone() {
     for (var i = 0; i < members.length; i++) {
-      if (members[i].status === 'up') {
+      if (members[i].status === 'up' && !members[i].isBackup) {
         members[i].status = 'done';
-        for (var j = 0; j < members.length; j++) {
-          if (members[j].status === 'waiting') { members[j].status = 'up'; break; }
+        // Promote backup to up first if present, else next waiting
+        var bi = findBackupIndex();
+        if (bi !== -1) {
+          members[bi].isBackup = false;
+          members[bi].status = 'up';
+        } else {
+          for (var j = 0; j < members.length; j++) {
+            if (members[j].status === 'waiting') { members[j].status = 'up'; break; }
+          }
         }
         alertFired = false; reassignHits(); renderQueue(); pushQueue(); return;
       }
@@ -477,7 +591,7 @@
     if (secs <= 45 && secs > 0 && !alertFired) {
       alertFired = true;
       var up = null;
-      for (var i = 0; i < members.length; i++) { if (members[i].status === 'up') { up = members[i]; break; } }
+      for (var i = 0; i < members.length; i++) { if (members[i].status === 'up' && !members[i].isBackup) { up = members[i]; break; } }
       showAlert('Chain drops in ' + toMMSS(secs) + ' \u2014 ' + (up ? up.name : 'next attacker') + ', attack NOW!');
     }
     if (secs > 45) alertFired = false;
