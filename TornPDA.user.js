@@ -156,7 +156,7 @@
     '<div id="ctlist"></div>' +
     '<div id="ctadd"><input type="text" id="ctinp" placeholder="Member name"/><button id="ctabtn">+ Add</button></div>' +
     '<div id="ctbtns">' +
-      '<button id="ctclaim">Claim slot</button>' +
+      '<button id="ctclaim">Claim slot (+1)</button>' +
       '<button id="ctdone">Mark done</button>' +
       '<button id="ctsound">Sound off</button>' +
       '<button id="ctreset">Reset queue</button>' +
@@ -259,15 +259,11 @@
   }
   function claimSlot() {
     if(!playerName){showInfo('Player name not detected yet.');return;}
-    var ml=playerName.toLowerCase();
-    for(var i=0;i<members.length;i++){
-      if(members[i].name.toLowerCase()===ml&&members[i].status!=='done'){
-        showInfo(members[i].status==='up'?'You are already up now!':'You are in the queue at hit #'+members[i].hitNum+'.'); return;
-      }
-    }
     var isFirst=!members.some(function(m){return m.status!=='done';});
     members.push({name:playerName,status:isFirst?'up':'waiting',hitNum:0});
     reassignHits(); renderQueue(); pushQueue();
+    var existing=members.filter(function(m){return m.name.toLowerCase()===playerName.toLowerCase()&&m.status!=='done';});
+    showInfo('Claimed slot \u2014 you have '+existing.length+' slot(s) in queue.');
   }
   function markDone() {
     for(var i=0;i<members.length;i++){
