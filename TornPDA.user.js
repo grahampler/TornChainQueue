@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Torn Chain Tracker - TornPDA
 // @namespace    https://torn.com
-// @version      3.5
+// @version      3.6
 // @description  Chain queue panel for TornPDA
 // @author       LordGraham
 // @downloadURL https://raw.githubusercontent.com/grahampler/TornChainQueue/main/TornPDA.user.js
@@ -101,27 +101,32 @@
     '#ctinfo{display:none;margin:6px 8px 0;padding:6px 8px;border-radius:6px;font-size:11px;background:#0d1f18;color:#5DCAA5;border:1px solid #1D9E75;}' +
     '#ctalt{display:none;margin:6px 8px 0;padding:7px 8px;border-radius:6px;font-size:11px;font-weight:500;background:#1e1608;color:#FAC775;border:1px solid #BA7517;}' +
     '#ctlist{max-height:180px;overflow-y:auto;padding:6px 8px;}' +
-    '.ctr{display:grid;grid-template-columns:24px 1fr auto auto auto;align-items:center;gap:5px;padding:5px 6px;border-radius:6px;border:1px solid #2e3147;background:#13151f;margin-bottom:4px;}' +
+    '.ctr{display:grid;grid-template-columns:24px 1fr auto auto auto auto;align-items:center;gap:5px;padding:5px 6px;border-radius:6px;border:1px solid #2e3147;background:#13151f;margin-bottom:4px;}' +
     '.ctr.up{border-color:#1D9E75;background:#0d1f18;}' +
     '.ctr.me{border-color:#534AB7;background:#13111f;}' +
     '.ctr.dn{opacity:0.3;}' +
+    '.ctr.bk{border-color:#BA7517;background:#1e1608;}' +
     '.ctav{width:24px;height:24px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:500;}' +
     '.ctnm{font-size:12px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}' +
     '.cthn{font-size:10px;color:#7b8098;white-space:nowrap;}' +
     '.cthn.up{color:#5DCAA5;font-weight:500;}' +
     '.cthn.me{color:#AFA9EC;font-weight:500;}' +
+    '.cthn.bk{color:#FAC775;font-weight:500;}' +
     '.ctbdg{font-size:9px;padding:2px 5px;border-radius:4px;font-weight:500;white-space:nowrap;}' +
     '.ctbdg.up{background:#0d2e20;color:#5DCAA5;border:1px solid #1D9E75;}' +
     '.ctbdg.wt{background:#1e2130;color:#7b8098;}' +
     '.ctbdg.dn{background:#181b27;color:#4a4f66;}' +
     '.ctbdg.me{background:#13111f;color:#AFA9EC;border:1px solid #534AB7;}' +
+    '.ctbdg.bk{background:#1e1608;color:#FAC775;border:1px solid #BA7517;}' +
     '.ctrm{width:20px;height:20px;background:transparent;border:1px solid #2e3147;border-radius:4px;color:#4a4f66;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
+    '.ctsk{width:20px;height:20px;background:transparent;border:1px solid #BA7517;border-radius:4px;color:#FAC775;font-size:9px;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;}' +
     '#ctadd{display:flex;gap:6px;padding:6px 8px;}' +
     '#ctinp{flex:1;height:32px;border:1px solid #2e3147;border-radius:6px;padding:0 8px;font-size:13px;background:#13151f;color:#e8eaf6;outline:none;}' +
     '#ctabtn{height:32px;padding:0 10px;border:1px solid #2e3147;border-radius:6px;background:#1e2130;color:#c8cae0;cursor:pointer;font-size:12px;}' +
     '#ctbtns{display:grid;grid-template-columns:1fr 1fr;gap:6px;padding:0 8px 8px;}' +
     '#ctbtns button{height:32px;border:1px solid #2e3147;border-radius:6px;font-size:11px;font-weight:500;background:#1e2130;color:#c8cae0;cursor:pointer;}' +
     '#ctclaim{background:#1D9E75!important;color:#fff!important;border-color:#1D9E75!important;}' +
+    '#ctbkbtn{background:#1e1608!important;color:#FAC775!important;border-color:#BA7517!important;}' +
     '#ctreset{color:#E24B4A!important;border-color:#4a1515!important;background:transparent!important;grid-column:span 2;}' +
     '#ctsound.on{background:#534AB7!important;color:#fff!important;border-color:#534AB7!important;}' +
     '#ctfoot{padding:4px 8px 8px;border-top:1px solid #2e3147;display:flex;align-items:center;justify-content:space-between;font-size:10px;color:#4a4f66;}' +
@@ -157,6 +162,7 @@
     '<div id="ctadd"><input type="text" id="ctinp" placeholder="Member name"/><button id="ctabtn">+ Add</button></div>' +
     '<div id="ctbtns">' +
       '<button id="ctclaim">Claim slot (+1)</button>' +
+      '<button id="ctbkbtn">Claim backup</button>' +
       '<button id="ctdone">Mark done</button>' +
       '<button id="ctsound">Sound off</button>' +
       '<button id="ctreset">Reset queue</button>' +
@@ -173,6 +179,7 @@
   document.getElementById('ctabtn').addEventListener('click', addMember);
   document.getElementById('ctinp').addEventListener('keydown', function(e) { if(e.key==='Enter') addMember(); });
   document.getElementById('ctclaim').addEventListener('click', claimSlot);
+  document.getElementById('ctbkbtn').addEventListener('click', claimBackup);
   document.getElementById('ctdone').addEventListener('click', markDone);
   document.getElementById('ctreset').addEventListener('click', resetQueue);
   document.getElementById('ctsound').addEventListener('click', toggleSound);
@@ -213,63 +220,124 @@
     }catch(e){}
   }
 
+  function findBackupIndex() {
+    for(var i=0;i<members.length;i++){if(members[i].isBackup) return i;}
+    return -1;
+  }
+  function findUpIndex() {
+    for(var i=0;i<members.length;i++){if(members[i].status==='up'&&!members[i].isBackup) return i;}
+    return -1;
+  }
+
   function reassignHits() {
     var offset=0;
     for(var i=0;i<members.length;i++){
       if(members[i].status==='done') continue;
+      if(members[i].isBackup) continue;
       offset++; members[i].hitNum=chainCount+offset;
     }
   }
+
   function renderQueue() {
     var list=document.getElementById('ctlist'), dot=document.getElementById('ctdot'), qn=document.getElementById('ctqn');
     if(!list) return;
     var ml=playerName?playerName.toLowerCase():'';
-    var pending=members.filter(function(m){return m.status!=='done';});
+    var pending=members.filter(function(m){return m.status!=='done'&&!m.isBackup;});
     if(dot) dot.style.background=members.some(function(m){return m.status==='up';})?'#1D9E75':'#4a4f66';
     if(qn) qn.textContent=pending.length?pending.length+' in queue':'';
     if(!members.length){list.innerHTML='<div style="color:#4a4f66;font-size:11px;text-align:center;padding:10px 0;">Add members to build the queue.</div>';return;}
+
+    var upIdx=findUpIndex(), backupIdx=findBackupIndex();
+    var sorted=[];
+    if(upIdx!==-1) sorted.push(upIdx);
+    if(backupIdx!==-1) sorted.push(backupIdx);
+    for(var i=0;i<members.length;i++){if(i!==upIdx&&i!==backupIdx) sorted.push(i);}
+
     list.innerHTML='';
-    for(var i=0;i<members.length;i++){
+    for(var si=0;si<sorted.length;si++){
       (function(idx){
         var m=members[idx],isMe=ml&&m.name.toLowerCase()===ml,col=pickColor(m.name);
         var row=document.createElement('div');
-        row.className='ctr'+(m.status==='up'?' up':m.status==='done'?' dn':isMe?' me':'');
+        if(m.isBackup){row.className='ctr bk';}
+        else{row.className='ctr'+(m.status==='up'?' up':m.status==='done'?' dn':isMe?' me':'');}
+
         var av=document.createElement('div'); av.className='ctav'; av.style.cssText='background:'+col+'22;color:'+col; av.textContent=initials(m.name);
         var nm=document.createElement('span'); nm.className='ctnm'; nm.textContent=m.name+(isMe?' (you)':'');
-        var hn=document.createElement('span'); hn.className='cthn'+(m.status==='up'?' up':isMe?' me':''); hn.textContent='#'+m.hitNum;
-        var bdg=document.createElement('span'); bdg.className='ctbdg '+(m.status==='up'?'up':m.status==='done'?'dn':isMe?'me':'wt'); bdg.textContent=m.status==='up'?'Up now':m.status==='done'?'Done':'Waiting';
-        var rm=document.createElement('button'); rm.className='ctrm'; rm.textContent='x';
-        rm.addEventListener('click',function(){
-          var wasUp=members[idx].status==='up';
-          members.splice(idx,1);
-          if(wasUp){for(var j=0;j<members.length;j++){if(members[j].status==='waiting'){members[j].status='up';break;}}}
-          reassignHits(); renderQueue(); pushQueue();
-        });
-        row.appendChild(av);row.appendChild(nm);row.appendChild(hn);row.appendChild(bdg);row.appendChild(rm);
+
+        var hn=document.createElement('span');
+        if(m.isBackup){hn.className='cthn bk';hn.textContent='bkp';}
+        else{hn.className='cthn'+(m.status==='up'?' up':isMe?' me':'');hn.textContent='#'+m.hitNum;}
+
+        var bdg=document.createElement('span');
+        if(m.isBackup){bdg.className='ctbdg bk';bdg.textContent='Backup';}
+        else{bdg.className='ctbdg '+(m.status==='up'?'up':m.status==='done'?'dn':isMe?'me':'wt');bdg.textContent=m.status==='up'?'Up now':m.status==='done'?'Done':'Waiting';}
+
+        // Skip button on up row when backup exists
+        if(m.status==='up'&&!m.isBackup&&backupIdx!==-1){
+          var sk=document.createElement('button'); sk.className='ctsk'; sk.title='Skip to backup'; sk.textContent='\u23ED';
+          sk.addEventListener('click',function(){skipToBackup();});
+          row.appendChild(av);row.appendChild(nm);row.appendChild(hn);row.appendChild(bdg);row.appendChild(sk);
+        } else {
+          var rm=document.createElement('button'); rm.className='ctrm'; rm.textContent='x';
+          rm.addEventListener('click',function(){
+            var wasUp=members[idx].status==='up'&&!members[idx].isBackup;
+            members.splice(idx,1);
+            if(wasUp){
+              var bi=findBackupIndex();
+              if(bi!==-1){members[bi].isBackup=false;members[bi].status='up';}
+              else{for(var j=0;j<members.length;j++){if(members[j].status==='waiting'){members[j].status='up';break;}}}
+            }
+            reassignHits(); renderQueue(); pushQueue();
+          });
+          row.appendChild(av);row.appendChild(nm);row.appendChild(hn);row.appendChild(bdg);row.appendChild(rm);
+        }
         list.appendChild(row);
-      })(i);
+      })(sorted[si]);
     }
   }
+
   function addMember() {
     var inp=document.getElementById('ctinp'); if(!inp) return;
     var name=inp.value.trim(); if(!name) return;
-    var isFirst=!members.some(function(m){return m.status!=='done';});
-    members.push({name:name,status:isFirst?'up':'waiting',hitNum:0});
+    var isFirst=!members.some(function(m){return m.status!=='done'&&!m.isBackup;});
+    members.push({name:name,status:isFirst?'up':'waiting',hitNum:0,isBackup:false});
     reassignHits(); inp.value=''; renderQueue(); pushQueue();
   }
   function claimSlot() {
     if(!playerName){showInfo('Player name not detected yet.');return;}
-    var isFirst=!members.some(function(m){return m.status!=='done';});
-    members.push({name:playerName,status:isFirst?'up':'waiting',hitNum:0});
+    var isFirst=!members.some(function(m){return m.status!=='done'&&!m.isBackup;});
+    members.push({name:playerName,status:isFirst?'up':'waiting',hitNum:0,isBackup:false});
     reassignHits(); renderQueue(); pushQueue();
-    var existing=members.filter(function(m){return m.name.toLowerCase()===playerName.toLowerCase()&&m.status!=='done';});
+    var existing=members.filter(function(m){return m.name.toLowerCase()===playerName.toLowerCase()&&m.status!=='done'&&!m.isBackup;});
     showInfo('Claimed slot \u2014 you have '+existing.length+' slot(s) in queue.');
+  }
+  function claimBackup() {
+    if(!playerName){showInfo('Player name not detected yet.');return;}
+    var bi=findBackupIndex();
+    if(bi!==-1){showInfo('Backup already set: '+members[bi].name+'. Remove them first.');return;}
+    var ui=findUpIndex();
+    if(ui===-1){showInfo('Nobody is up right now \u2014 no backup needed yet.');return;}
+    members.push({name:playerName,status:'waiting',hitNum:0,isBackup:true});
+    renderQueue(); pushQueue();
+    showInfo(playerName+' is now backup for '+members[ui].name+'.');
+  }
+  function skipToBackup() {
+    var ui=findUpIndex(), bi=findBackupIndex();
+    if(ui===-1||bi===-1) return;
+    var skippedName=members[ui].name;
+    members[ui].status='waiting';
+    members[bi].isBackup=false;
+    members[bi].status='up';
+    alertFired=false; reassignHits(); renderQueue(); pushQueue();
+    showInfo(members[bi].name+' promoted. '+skippedName+' moved to end of queue.');
   }
   function markDone() {
     for(var i=0;i<members.length;i++){
-      if(members[i].status==='up'){
+      if(members[i].status==='up'&&!members[i].isBackup){
         members[i].status='done';
-        for(var j=0;j<members.length;j++){if(members[j].status==='waiting'){members[j].status='up';break;}}
+        var bi=findBackupIndex();
+        if(bi!==-1){members[bi].isBackup=false;members[bi].status='up';}
+        else{for(var j=0;j<members.length;j++){if(members[j].status==='waiting'){members[j].status='up';break;}}}
         alertFired=false; reassignHits(); renderQueue(); pushQueue(); return;
       }
     }
@@ -285,15 +353,17 @@
     if(soundEnabled) b.classList.add('on'); else b.classList.remove('on');
   }
 
-  function pushQueue() { pushLockUntil = Date.now() + 3000; doPost(TRACKER_URL+'/queue',{members:members,chainCount:chainCount},null); }
+  function pushQueue() { pushLockUntil=Date.now()+3000; doPost(TRACKER_URL+'/queue',{members:members,chainCount:chainCount},null); }
   function checkPersonalAlert(incoming) {
     if(!playerName) return;
     var ml=playerName.toLowerCase();
-    var wasUp=members.some(function(m){return m.name.toLowerCase()===ml&&m.status==='up';});
-    var nowUp=incoming.some(function(m){return m.name.toLowerCase()===ml&&m.status==='up';});
+    var wasUp=members.some(function(m){return m.name.toLowerCase()===ml&&m.status==='up'&&!m.isBackup;});
+    var wasBackup=members.some(function(m){return m.name.toLowerCase()===ml&&m.isBackup;});
+    var nowUp=incoming.some(function(m){return m.name.toLowerCase()===ml&&m.status==='up'&&!m.isBackup;});
     if(nowUp&&!wasUp){
-      var me=incoming.find(function(m){return m.name.toLowerCase()===ml;});
-      showAlert('Your turn, '+playerName+'! Attack NOW \u2014 hit #'+(me?me.hitNum:''));
+      var me=incoming.find(function(m){return m.name.toLowerCase()===ml&&m.status==='up';});
+      if(wasBackup){showAlert('Backup promoted! '+playerName+', attack NOW \u2014 hit #'+(me?me.hitNum:''));}
+      else{showAlert('Your turn, '+playerName+'! Attack NOW \u2014 hit #'+(me?me.hitNum:''));}
     }
   }
   function schedulePull(delay) { setTimeout(doPull, delay||5000); }
@@ -306,7 +376,7 @@
       if(JSON.stringify(members)!==JSON.stringify(incoming)||incomingCount!==chainCount){
         if(prevChainCount!==-1&&incomingCount>prevChainCount){
           var diff=incomingCount-prevChainCount;
-          if(incoming.filter(function(m){return m.status!=='done';}).length>0&&diff>0)
+          if(incoming.filter(function(m){return m.status!=='done'&&!m.isBackup;}).length>0&&diff>0)
             showInfo(diff===1?'Hit #'+incomingCount+' landed \u2014 queue advanced.':diff+' hits landed.');
         }
         checkPersonalAlert(incoming);
@@ -329,7 +399,7 @@
     }
     if(secs<=45&&secs>0&&!alertFired){
       alertFired=true;
-      var up=null; for(var i=0;i<members.length;i++){if(members[i].status==='up'){up=members[i];break;}}
+      var up=null; for(var i=0;i<members.length;i++){if(members[i].status==='up'&&!members[i].isBackup){up=members[i];break;}}
       showAlert('Chain drops in '+toMMSS(secs)+' \u2014 '+(up?up.name:'next attacker')+', attack NOW!');
     }
     if(secs>45) alertFired=false;
