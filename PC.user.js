@@ -147,7 +147,7 @@
       '<div id="ct-qwrap"><div id="ct-qlist"></div></div>' +
       '<div id="ct-addrow"><input type="text" id="ct-addinp" placeholder="Member name" /><button id="ct-addbtn">+ Add</button></div>' +
       '<div id="ct-controls">' +
-        '<button id="ct-btn-claim">Claim slot</button>' +
+        '<button id="ct-btn-claim">Claim slot (+1)</button>' +
         '<button id="ct-btn-done">Mark done</button>' +
         '<button id="ct-btn-sound">Sound off</button>' +
         '<button id="ct-btn-reset">Reset queue</button>' +
@@ -383,13 +383,13 @@
     reassignHits(); inp.value = ''; renderQueue(); pushQueue();
   }
 
-  function claimSlot() {
+    function claimSlot() {
     if (!playerName) { showInfo('Player name not detected yet, please wait...'); return; }
-    var ml = playerName.toLowerCase();
-    for (var i = 0; i < members.length; i++) {
-      if (members[i].name.toLowerCase() === ml && members[i].status !== 'done') {
-        showInfo(members[i].status === 'up' ? 'You are already up now!' : 'You are in the queue at hit #' + members[i].hitNum + '.');
-        return;
+    var isFirst = !members.some(function(m) { return m.status !== 'done'; });
+    members.push({ name: playerName, status: isFirst ? 'up' : 'waiting', hitNum: 0 });
+    reassignHits(); renderQueue(); pushQueue();
+    var existing = members.filter(function(m) { return m.name.toLowerCase() === playerName.toLowerCase() && m.status !== 'done'; });
+    showInfo('Claimed slot — you have ' + existing.length + ' slot(s) in queue.');
       }
     }
     var isFirst = !members.some(function(m) { return m.status !== 'done'; });
