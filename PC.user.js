@@ -383,18 +383,13 @@
     reassignHits(); inp.value = ''; renderQueue(); pushQueue();
   }
 
-    function claimSlot() {
+  function claimSlot() {
     if (!playerName) { showInfo('Player name not detected yet, please wait...'); return; }
     var isFirst = !members.some(function(m) { return m.status !== 'done'; });
     members.push({ name: playerName, status: isFirst ? 'up' : 'waiting', hitNum: 0 });
     reassignHits(); renderQueue(); pushQueue();
     var existing = members.filter(function(m) { return m.name.toLowerCase() === playerName.toLowerCase() && m.status !== 'done'; });
-    showInfo('Claimed slot — you have ' + existing.length + ' slot(s) in queue.');
-      }
-    }
-    var isFirst = !members.some(function(m) { return m.status !== 'done'; });
-    members.push({ name: playerName, status: isFirst ? 'up' : 'waiting', hitNum: 0 });
-    reassignHits(); renderQueue(); pushQueue();
+    showInfo('Claimed slot \u2014 you have ' + existing.length + ' slot(s) in queue.');
   }
 
   function markDone() {
